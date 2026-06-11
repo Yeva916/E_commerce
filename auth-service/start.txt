@@ -1,0 +1,4 @@
+uv run uvicorn app.main:app --reload --port 8001
+google client id -> 858883602338-almiafj4k81b2lku0itebso21n8pcps3.apps.googleusercontent.com
+
+

@@ -1,0 +1,39 @@
+| Models                    | Schemas                             |
+| ------------------------- | ----------------------------------- |
+| Represent database tables | Represent API request/response data |
+| Used by SQLAlchemy        | Used by Pydantic                    |
+| Stored in database        | Validates data                      |
+| Contains DB columns       | Contains fields exposed through API |
+
+
+If you just want Authentication (Login/Signup): Use Google's token once to verify their email identity, discard it immediately, and use your native application JWT ("Enigma") for everything else.
+
+If you want Authorization (Accessing Drive, Calendar, Photos, Gmail): Save Google's token (and a refresh token) in your database, because your backend needs to present that security clearance badge to Google every single time it reads or writes data to their Google account.
+
+What Happens if a Hacker Tries to Tamper with It?
+Imagine a malicious user captures their own token. They see their role is set to "user". They use an online tool to change the payload text to say "role": "admin", patch the base64 string back together, and send it to your backend to try and access your admin checkout dashboards.
+
+Here is what happens when it hits your jwt.decode() block:
+
+Your FastAPI backend reads the edited payload: "role": "admin".
+
+Your server takes that edited payload text and mixes it with your secret key ("Enigma") to recalculate what the signature should be.
+
+Your server compares its newly calculated signature against the signature string attached to the end of the hacker's token.
+
+Boom! They don't match. Because the hacker doesn't know your secret key ("Enigma"), they couldn't calculate the correct math required to forge a matching signature for an admin payload.
+
+Your server instantly throws a JWTError: Signature verification failed, flags the request as unsafe, and completely blocks access!
+
+
+@model_validator in pydantic
+
+
+For each cookie in memory:
+  ├── Does the URL domain match the Cookie Domain? (Yes)
+  ├── Does the URL path start with the Cookie Path? (Yes)
+  ├── Is it an HTTPS link? Or is Secure=False? (Yes)
+  └── Does the SameSite policy permit this request? (Yes)
+       │
+       ▼
+[Attach Cookie to HTTP Request Header]
