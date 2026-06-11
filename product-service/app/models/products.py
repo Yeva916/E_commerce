@@ -1,6 +1,6 @@
 from app.db.database import Base
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, Integer, String,Datetime
+from sqlalchemy import Boolean, Column, Integer, String,DateTime
 import uuid
 from datetime import datetime,timezone
 class Product(Base):
@@ -17,7 +17,8 @@ class Product(Base):
     category_id = Column(Integer)
     stock_quantity = Column(Integer)
     image_url = Column(String)
-    created_at = Column(Datetime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(Datetime, 
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, 
                         default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc))

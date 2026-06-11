@@ -16,3 +16,13 @@ class ProductResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+class ProductUpdate(BaseModel):
+    name:str|None=None
+    description:str|None=None
+    price:float|None=None
+    image_url:str|None=None
+    stock_quantity:int|None=None
+    is_archived:bool|None=None
+    category_id:int|None=None
+    
