@@ -9,6 +9,7 @@ from app.services.product_service import ProductService
 from app.services.category_service import CategoryService
 from app.schemas.product import ChangeStockQuantity, ProductCreate, ProductResponse,ProductUpdate
 from app.core.security import RoleChecker,UserRole
+from typing import Annotated, Literal
 
 router = APIRouter(
     prefix="/products",
@@ -25,6 +26,11 @@ def get_product_service(db:AsyncSession=Depends(get_db))->ProductService:
 async def get_products(
     page:int=Query(1,ge=1),
     size:int=Query(20,ge=1,le=100),
+    min_price:Annotated[int|None,Query(ge=0)]=None,
+    max_price:Annotated[int|None,Query(ge=0)]=None,
+    sort_by:Annotated[Literal["price_asc", "price_desc", "newest", "relevance"] | None, 
+        Query(description="Sort order for results")
+    ] = "newest",
     search:str|None=None,
     category_id:int|None=None,
     product_service:ProductService=Depends(get_product_service)
@@ -33,7 +39,10 @@ async def get_products(
         page=page,
         size=size,
         search=search,
-        category_id=category_id
+        category_id=category_id,
+        min_price=min_price,
+        max_price=max_price,
+        sort_by=sort_by
     )
     return results
 

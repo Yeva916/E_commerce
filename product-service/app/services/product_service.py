@@ -40,13 +40,27 @@ class ProductService:
             raise HTTPException(status_code=404,detail="Product not found")
         return product
     
-    async def list_products(self,page,size,search:str|None=None,category_id:int|None=None):
+    async def list_products(self,
+                            page,
+                            size,
+                            search:str|None=None,
+                            category_id:int|None=None,
+                            min_price:int|None=None,
+                            max_price:int|None=None,
+                            sort_by:str|None=None
+                            ):
         if category_id is not None:
             category = await self.category_service.get_category_by_id(category_id)
             if not category:
                 raise HTTPException(status_code=400,detail="Category with this id does not exist")
         
-        products = await self.product_repository.list_products(page,size,search=search,category_id=category_id)
+        products = await self.product_repository.list_products(page,
+                                                               size,search=search,
+                                                               category_id=category_id,
+                                                               min_price=min_price,
+                                                               max_price=max_price,
+                                                               sort_by=sort_by
+                                                               )
         return products
 
     async def update_product(self,product_id:UUID,product_data:ProductUpdate):

@@ -6,6 +6,8 @@ from sqlalchemy.future import select
 from app.db.database import get_db
 from app.models.products import Product
 from app.schemas.product import ProductCreate,ProductUpdate
+from typing import Literal
+from sqlalchemy import asc,desc
 
 class ProductRepository:
     def __init__(self,db:AsyncSession):
@@ -25,13 +27,32 @@ class ProductRepository:
         result = await self.db.execute(query)
         return result.scalars().first()
     
-    async def list_products(self,page:int,size:int,search:str|None=None,category_id:int|None=None)->list[Product]:
+    async def list_products(self,
+                            page:int,size:int,
+                            search:str|None=None,
+                            category_id:int|None=None,
+                            min_price:float|None=None,
+                            max_price:float|None=None,
+                            sort_by:Literal["price_asc", "price_desc", "newest", "relevance"]=None
+                            )->list[Product]:
         query = select(Product)
         if search:
             clean_search = search.strip()
             query = query.where(Product.name.icontains(clean_search))
         if category_id is not None:
             query = query.where(Product.category_id == category_id)
+        if min_price is not None:
+            query = query.where(Product.price >= min_price)
+        if max_price is not None:
+            query = query.where(Product.price <= max_price)
+        if sort_by == "newest":
+            query=query.order_by(desc(Product.created_at))
+        elif sort_by=="price_asc":
+            query=query.order_by(asc(Product.price))
+        elif sort_by == "price_desc":
+            query=query.order_by(desc(Product.price))
+        elif sort_by == "relevance" or sort_by is None:
+            query=query.order_by(desc(Product.id))
         query = query.offset((page - 1) * size).limit(size)
         result = await self.db.execute(query)
         return result.scalars().all()
@@ -46,20 +67,29 @@ class ProductRepository:
         result = await self.db.execute(query)
         return result.scalars().all()
     
-    async def filter_products(self,
-                              category_id:int|None=None,
-                              min_price:float|None=None,
-                              max_price:float|None=None,
-                              )->list[Product]:
-        query = select(Product)
-        if category_id is not None:
-            query = query.where(Product.category_id == category_id)
-        if min_price is not None:
-            query = query.where(Product.price >= min_price)
-        if max_price is not None:
-            query = query.where(Product.price <= max_price)
-        result = await self.db.execute(query)
-        return result.scalars().all()
+    # async def filter_products(self,
+    #                           category_id:int|None=None,
+    #                           min_price:float|None=None,
+    #                           max_price:float|None=None,
+    #                           sort_by:Literal["price_asc", "price_desc", "newest", "relevance"]=None
+    #                           )->list[Product]:
+    #     query = select(Product)
+    #     if category_id is not None:
+    #         query = query.where(Product.category_id == category_id)
+    #     if min_price is not None:
+    #         query = query.where(Product.price >= min_price)
+    #     if max_price is not None:
+    #         query = query.where(Product.price <= max_price)
+    #     if sort_by == "newest":
+    #         query.order_by(desc(Product.created_at))
+    #     elif sort_by=="price_asc":
+    #         query.order_by(asc(Product.price))
+    #     elif sort_by == "price_desc":
+    #         query.order_by(desc(Product.price))
+    #     elif sort_by == "relevance" or sort_by is None:
+    #         query.order_by(desc(Product.id))
+    #     result = await self.db.execute(query)
+    #     return result.scalars().all()
 
     async def update_product(
             self,
