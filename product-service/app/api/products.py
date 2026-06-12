@@ -7,7 +7,7 @@ from app.repository.product_repository import ProductRepository
 from app.repository.category_repository import CategoryRepository
 from app.services.product_service import ProductService
 from app.services.category_service import CategoryService
-from app.schemas.product import ProductCreate, ProductResponse,ProductUpdate
+from app.schemas.product import ChangeStockQuantity, ProductCreate, ProductResponse,ProductUpdate
 
 router = APIRouter(
     prefix="/products",
@@ -37,8 +37,8 @@ async def get_products(
     return results
 
 
-@router.post("/",response_model=ProductResponse)
-async def create_product(product_data:ProductCreate,
+@router.post("/",response_model=list[ProductResponse])
+async def create_product(product_data:list[ProductCreate],
                          product_service:ProductService=Depends(get_product_service)):
     created_product = await product_service.create_product(product_data)
     return created_product
@@ -60,8 +60,24 @@ async def update_product(product_id:UUID,
     return updated_product
 
 
-@router.delete("/{product_id}")
+@router.put("/{product_id}/archive")
 async def delete_product(product_id:UUID,
                          product_service:ProductService=Depends(get_product_service)):
-    deleted_product = await product_service.delete_product(product_id)
-    return deleted_product
+    archive_product = await product_service.archive_product(product_id)
+    return archive_product
+
+@router.post("/{product_id}/increase-stock")
+async def increase_stock(product_id:UUID,
+                        data:ChangeStockQuantity,
+                        product_service:ProductService=Depends(get_product_service)
+                        ):
+    updated_stock = await product_service.increase_stock(product_id,data.quantity)
+    return updated_stock
+
+@router.post("/{product_id}/decrease-stock")
+async def increase_stock(product_id:UUID,
+                        data:ChangeStockQuantity,
+                        product_service:ProductService=Depends(get_product_service)
+                        ):
+    updated_stock = await product_service.decrease_stock(product_id,data.quantity)
+    return updated_stock

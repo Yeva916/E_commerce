@@ -11,13 +11,14 @@ class ProductRepository:
     def __init__(self,db:AsyncSession):
         self.db = db
 
-    async def create_product(self,product_data:ProductCreate)->Product:
+    async def create_product(self,products_data:ProductCreate)->Product:
         
-        db_product = Product(**product_data.model_dump())
-        await self.db.add(db_product)
+        db_products = [Product(**product_data.model_dump()) for product_data in products_data]
+        self.db.add_all(db_products)
         await self.db.commit()
-        await self.db.refresh(db_product)
-        return db_product
+        for db_product in db_products:
+            await self.db.refresh(db_product)
+        return db_products
     
     async def get_product_by_id(self,product_id:UUID)->Product:
         query = select(Product).where(Product.id == product_id)
@@ -27,7 +28,8 @@ class ProductRepository:
     async def list_products(self,page:int,size:int,search:str|None=None,category_id:int|None=None)->list[Product]:
         query = select(Product)
         if search:
-            query = query.where(Product.name.contains(search))
+            clean_search = search.strip()
+            query = query.where(Product.name.icontains(clean_search))
         if category_id is not None:
             query = query.where(Product.category_id == category_id)
         query = query.offset((page - 1) * size).limit(size)
@@ -76,7 +78,7 @@ class ProductRepository:
         await self.db.refresh(db_product)
         return db_product
     
-    async def delete_product(self,product_id:UUID)->list[Product]:
+    # async def delete_product(self,product_id:UUID)->list[Product]:
         query = select(Product).where(Product.id == product_id)
         result = await self.db.execute(query)
         db_product = result.scalars().first()

@@ -10,23 +10,29 @@ class ProductService:
         self.product_repository = product_repository
         self.category_service = category_service
 
-    async def create_product(self,product_data:ProductCreate):
-        
-        if product_data.price <= 0:
-            raise HTTPException(status_code=400,detail="Price must be a positive integer")
-        
-        existing_product = await self.product_repository.get_product_by_name(product_data.name)
-        
-        if existing_product:
-            raise HTTPException(status_code=400,detail="Product with this name already exists")
-        
+    async def create_product(self,products_data:list[ProductCreate]):
+        validated_products = []
+        seen_name_in_batch = set()
+        for product_data in products_data:
+            if product_data.price <= 0:
+                raise HTTPException(status_code=400,detail="Price must be a positive integer")
+            
+            existing_product = await self.product_repository.get_product_by_name(product_data.name)
+            
+            if existing_product:
+                raise HTTPException(status_code=400,detail="Product with this name already exists")
+            
 
-        # I think i need to intergrate with category repository services rather than repository 
-        category = await self.category_service.get_category_by_id(product_data.category_id)
-        if not category:
-            raise HTTPException(status_code=400,detail="Category with this id does not exist")
-        new_product = await self.product_repository.create_product(product_data)
-        return new_product
+            # I think i need to intergrate with category repository services rather than repository 
+            category = await self.category_service.get_category_by_id(product_data.category_id)
+            if not category:
+                raise HTTPException(status_code=400,detail=f"Category with this {product_data.category_id} does not exist")
+            seen_name_in_batch.add(product_data.name)
+            validated_products.append(product_data)
+            # new_product = await self.product_repository.create_product(product_data)
+            # output_list.append(new_product)
+        db_products = await self.product_repository.create_product(validated_products)
+        return db_products
 
     async def get_product_by_id(self,product_id:UUID):
         product = await self.product_repository.get_product_by_id(product_id)
@@ -68,29 +74,31 @@ class ProductService:
         product = await self.product_repository.get_product_by_id(product_id)
         if not product:
             raise HTTPException(status_code=404,detail="Product not found")
-        await self.product_repository.update_product(
+        update_product = await self.product_repository.update_product(
             product_id,
             ProductUpdate(stock_quantity=product.stock_quantity + quantity)
         )
+        return update_product
     
     async def decrease_stock(self,product_id:UUID,quantity:int):
-        product = await self.product_repository.get_product_by_id(product_id).with_for_update()
+        product = await self.product_repository.get_product_by_id(product_id)
         if not product:
             raise HTTPException(status_code=404,detail="Product not found")
         if product.stock_quantity < quantity:
             raise HTTPException(status_code=400,detail="Not enough stock available")
-        await self.product_repository.update_product(
+        update_product = await self.product_repository.update_product(
             product_id,
             ProductUpdate(stock_quantity=product.stock_quantity - quantity)
         )
+        return update_product
 
     async def archive_product(self,product_id:UUID):
         product = await self.product_repository.get_product_by_id(product_id)
         
         if not product:
             raise HTTPException(status_code=404,detail="Product not found")
-        await self.product_repository.update_product(
+        result = await self.product_repository.update_product(
             product_id,
-            ProductUpdate(is_archived=True)
+            ProductUpdate(is_active=False)
         )
-
+        return result
