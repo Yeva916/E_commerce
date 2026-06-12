@@ -65,8 +65,8 @@ class ProductRepository:
             self,
             product_id:UUID,
             product_data:ProductUpdate
-        ) -> list[Product]:
-        query = select(Product).where(Product.id == product_id)
+        ) -> Product:
+        query = select(Product).where(Product.id == product_id).with_for_update()
         result = await self.db.execute(query)
         db_product = result.scalars().first()
         if not db_product:
@@ -79,11 +79,11 @@ class ProductRepository:
         return db_product
     
     # async def delete_product(self,product_id:UUID)->list[Product]:
-        query = select(Product).where(Product.id == product_id)
-        result = await self.db.execute(query)
-        db_product = result.scalars().first()
-        if not db_product:
-            return None
-        await self.db.delete(db_product)
-        await self.db.commit()
-        return db_product
+    #     query = select(Product).where(Product.id == product_id)
+    #     result = await self.db.execute(query)
+    #     db_product = result.scalars().first()
+    #     if not db_product:
+    #         return None
+    #     await self.db.delete(db_product)
+    #     await self.db.commit()
+    #     return db_product

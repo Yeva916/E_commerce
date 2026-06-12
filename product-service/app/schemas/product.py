@@ -28,6 +28,9 @@ class ProductUpdate(BaseModel):
     stock_quantity:int|None=None
     category_id:int|None=None
     is_active:bool|None=None
+    
+    # class Config:
+    #     from_attribute = True
 
 class ChangeStockQuantity(BaseModel):
     quantity:int

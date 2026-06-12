@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from app.api import products, categories, inventory
+from app.api import products, categories, internal
 from app.db.database import engine,Base
 from app.models.products import Product
 from app.models.category import Category
@@ -22,7 +22,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(products.router)
 app.include_router(categories.router)
-app.include_router(inventory.router)
+app.include_router(internal.router)
 
 @app.get("/")
 def get_root():
