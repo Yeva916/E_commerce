@@ -1,3 +1,5 @@
+from itertools import product
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.category import Category
@@ -42,3 +44,5 @@ class CategoryRepository:
         await self.db.commit()
         await self.db.refresh(category)
         return category
+
+  

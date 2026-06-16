@@ -17,6 +17,7 @@ class InventoryResponse(BaseModel):
         from_attributes=True
 
 class ReservationSchema(BaseModel):
+    product_id:UUID
     quantity:int
 
 class ReservationResponse(BaseModel):
@@ -25,9 +26,13 @@ class ReservationResponse(BaseModel):
     remaining_quantity:int
 
 class ReleaseSchema(BaseModel):
+    product_id:UUID
     quantity:int
 
 class ReleaseResponse(BaseModel):
     product_id: UUID
     released_quantity: int
     remaining_quantity: int
+
+class Stock(BaseModel):
+    product_id:UUID

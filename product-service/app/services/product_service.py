@@ -1,3 +1,4 @@
+from typing import List
 from app.repository.product_repository import ProductRepository
 from app.services.category_service import CategoryService
 from fastapi import HTTPException
@@ -116,3 +117,15 @@ class ProductService:
             ProductUpdate(is_active=False)
         )
         return result
+
+    async def bulk_get_product_by_ids(self,product_ids):
+        ids = []
+        for id in product_ids:
+            ids.append(id.product_id)
+        return await self.product_repository.bulk_get_product_by_ids(ids)
+    
+    async def bulk_increase_stock(self,payloads):
+        return await self.product_repository.bulk_increase_stock(payloads)
+    
+    async def bulk_decrease_stock(self,payloads):
+        return await self.product_repository.bulk_decrease_stock(payloads)

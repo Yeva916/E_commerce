@@ -1,13 +1,12 @@
-
+from fastapi import HTTPException,status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 from uuid import UUID
 from sqlalchemy.future import select
-from app.db.database import get_db
 from app.models.products import Product
 from app.schemas.product import ProductCreate,ProductUpdate
-from typing import Literal
+from typing import Dict, Literal
 from sqlalchemy import asc,desc
+from typing import List,Tuple,Dict
 
 class ProductRepository:
     def __init__(self,db:AsyncSession):
@@ -66,30 +65,6 @@ class ProductRepository:
         query = select(Product)
         result = await self.db.execute(query)
         return result.scalars().all()
-    
-    # async def filter_products(self,
-    #                           category_id:int|None=None,
-    #                           min_price:float|None=None,
-    #                           max_price:float|None=None,
-    #                           sort_by:Literal["price_asc", "price_desc", "newest", "relevance"]=None
-    #                           )->list[Product]:
-    #     query = select(Product)
-    #     if category_id is not None:
-    #         query = query.where(Product.category_id == category_id)
-    #     if min_price is not None:
-    #         query = query.where(Product.price >= min_price)
-    #     if max_price is not None:
-    #         query = query.where(Product.price <= max_price)
-    #     if sort_by == "newest":
-    #         query.order_by(desc(Product.created_at))
-    #     elif sort_by=="price_asc":
-    #         query.order_by(asc(Product.price))
-    #     elif sort_by == "price_desc":
-    #         query.order_by(desc(Product.price))
-    #     elif sort_by == "relevance" or sort_by is None:
-    #         query.order_by(desc(Product.id))
-    #     result = await self.db.execute(query)
-    #     return result.scalars().all()
 
     async def update_product(
             self,
@@ -117,3 +92,86 @@ class ProductRepository:
     #     await self.db.delete(db_product)
     #     await self.db.commit()
     #     return db_product
+
+    async def bulk_get_product_by_ids(self,product_ids:List[UUID]):
+        query = select(Product).where(Product.id.in_(product_ids))
+        result = await self.db.execute(query)
+        return result.scalars().all()
+    
+    async def bulk_decrease_stock(self,payloads)->Tuple[List[Product],Dict[UUID,int]]:
+
+        product_ids = [p.product_id for p in payloads]
+        payload_map = {p.product_id:p.quantity for p in payloads}
+
+        try:
+            query = (
+                select(Product)
+                .where(Product.id.in_(product_ids))
+                .with_for_update()
+            )
+
+            result = await self.db.execute(query)
+            products = result.scalars().all()
+
+            if len(products) != len(product_ids):
+                raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="One or more products in your order do not exist."
+            )
+
+            for product in products:
+                requested_qty = payload_map[product.id]
+                if product.stock_quantity < requested_qty:
+                    raise HTTPException (
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail = f"Insufficient stock for product: {product.name}"
+                    )
+            
+            for product in products:
+                product.stock_quantity -= payload_map[product.id]
+
+            await self.db.commit()
+            return products,payload_map
+        
+        except Exception as e:
+            await self.db.rollback()
+            raise e
+    
+    async def bulk_increase_stock(self,payloads)->Tuple[List[Product],Dict[UUID,int]]:
+
+        product_ids = [p.product_id for p in payloads]
+        payload_map = {p.product_id:p.quantity for p in payloads}
+
+        try:
+            query = (
+                select(Product)
+                .where(Product.id.in_(product_ids))
+                .with_for_update()
+            )
+
+            result = await self.db.execute(query)
+            products = result.scalars().all()
+
+            if len(products) != len(product_ids):
+                raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="One or more products in your order do not exist."
+            )
+
+            # for product in products:
+            #     requested_qty = payload_map[product.id]
+            #     if product.stock_quantity < requested_qty:
+            #         raise HTTPException (
+            #             status_code=status.HTTP_400_BAD_REQUEST,
+            #             detail = f"Insufficient stock for product: {product.name}"
+            #         )
+            
+            for product in products:
+                product.stock_quantity += payload_map[product.id]
+
+            await self.db.commit()
+            return products,payload_map
+        
+        except Exception as e:
+            await self.db.rollback()
+            raise e

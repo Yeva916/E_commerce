@@ -1,47 +1,60 @@
 from fastapi import APIRouter, Depends
-from app.schemas.internal import ReservationSchema,ReleaseSchema,ReservationResponse,ReleaseResponse,InternalProductResponse,InventoryResponse
+from app.schemas.internal import ReservationSchema,ReleaseSchema,ReservationResponse,ReleaseResponse,InternalProductResponse,InventoryResponse,Stock
 from app.api.products import get_product_service
 from app.services.product_service import ProductService
 from uuid import UUID
 from app.core.security import RoleChecker,UserRole
+from typing import List
 router = APIRouter(
     prefix="/internal/products",
     tags=["internal"]
 )
 
-@router.get("/{product_id}",response_model=InternalProductResponse,dependencies=[Depends(RoleChecker([UserRole.SERVICE]))])
-async def get_product(product_id:UUID,product_service:ProductService=Depends(get_product_service)):
-    print(product_id)
-    result = await product_service.get_product_by_id(product_id)
-    return result
+# @router.get("/",response_model=List[InternalProductResponse],dependencies=[Depends(RoleChecker([UserRole.SERVICE]))])
+# async def get_product(product_ids:List[UUID],product_service:ProductService=Depends(get_product_service)):
+#     # print(product_id)
+#     result = await product_service.bulck_get_product_by_ids(product_ids)
+#     return result
 
 
-@router.get("/{product_id}/stock",response_model=InventoryResponse,dependencies=[Depends(RoleChecker([UserRole.SERVICE]))])
-async def check_stock(product_id:UUID,
+@router.post("/stock",response_model=List[InventoryResponse],dependencies=[Depends(RoleChecker([UserRole.SERVICE]))])
+async def check_stock(product_ids:List[Stock],
                 product_service:ProductService=Depends(get_product_service)):
-    result = await product_service.get_product_by_id(product_id)
+
+    # print(product_ids)
+    result = await product_service.bulk_get_product_by_ids(product_ids)
     return result
 
 
-@router.post("/{product_id}/reserve",response_model=ReservationResponse,dependencies=[Depends(RoleChecker([UserRole.SERVICE]))]) #when the order is placed
-async def reserve_product(product_id:UUID,
-                          payload:ReservationSchema,
+@router.post("/reserve",response_model=List[ReservationResponse],dependencies=[Depends(RoleChecker([UserRole.SERVICE]))]) #when the order is placed
+async def reserve_product(
+                          payloads:List[ReservationSchema],
                           product_service:ProductService=Depends(get_product_service)
                           ):
-    result = await product_service.decrease_stock(product_id,payload.quantity)
-    return ReservationResponse(
-        product_id=result.id,
-        reserved_quantity=payload.quantity,
-        remaining_quantity=result.stock_quantity)
+    products,product_map = await product_service.bulk_decrease_stock(payloads) ## solve error
+    response = []
+    # print(products)
+    for product in products:
+        res = ReservationResponse(
+        product_id=product.id,
+        reserved_quantity=product_map[product.id], # solve error
+        remaining_quantity=product.stock_quantity)
+        # )
+        response.append(res)
+    return response
 
-@router.post("/{product_id}/release",response_model=ReleaseResponse,dependencies=[Depends(RoleChecker([UserRole.SERVICE]))]) #if user cancels the order
-async def release_product(product_id:UUID,
-                    payload:ReleaseSchema,
+@router.post("/release",response_model=List[ReleaseResponse],dependencies=[Depends(RoleChecker([UserRole.SERVICE]))]) #if user cancels the order
+async def release_product(
+                    payload:List[ReleaseSchema],
                     product_service:ProductService=Depends(get_product_service)):
-    result = await product_service.increase_stock(product_id,payload.quantity)
-    return ReleaseResponse(
-        product_id=result.id,
-        remaining_quantity=result.stock_quantity,
-        released_quantity=payload.quantity)
+    products,product_map = await product_service.bulk_increase_stock(payload) # solve error
+    response = []
+    for product in products:
+        res = ReleaseResponse(
+        product_id=product.id,
+        remaining_quantity=product.stock_quantity, #solve error
+        released_quantity=product_map[product.id])
+        response.append(res)
+    return response
 
 
