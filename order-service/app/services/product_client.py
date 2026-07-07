@@ -1,7 +1,7 @@
 
 import httpx
 from app.core.config import settings
-from app.schemas.order import Item, ReservationSchema
+from app.schemas.order import Item, ReleaseSchema, ReservationSchema
 from pydantic import TypeAdapter
 from typing import List
 class ProductClient:
@@ -44,5 +44,12 @@ class ProductClient:
             json=json_payload
         )
 
-    async def release_stock(self,product_id,quantity):
-        pass
+    async def release_stock(self,client,payloads:ReleaseSchema):
+        adapter = TypeAdapter(List[ReleaseSchema])
+        json_payload = adapter.dump_python(payloads,mode="json")
+        return await self._request(
+            client=client,
+            method="POST",
+            endpoint="/internal/products/release",
+            json = json_payload
+        )

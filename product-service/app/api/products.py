@@ -22,7 +22,7 @@ def get_product_service(db:AsyncSession=Depends(get_db))->ProductService:
     category_service = CategoryService(category_repo)
     return ProductService(product_repo,category_service)
 
-@router.get("/",response_model=list[ProductResponse],dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))])
+@router.get("/",response_model=list[ProductResponse])
 async def get_products(
     page:int=Query(1,ge=1),
     size:int=Query(20,ge=1,le=100),

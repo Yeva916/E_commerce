@@ -17,5 +17,12 @@ class ReleaseSchema(BaseModel):
     quantity:int
 
 class CreateOrderRequest(BaseModel):
-    user_id:UUID
+    # user_id:UUID
     items :List[Item]
+
+class CancelOrderRequest(BaseModel):
+    order_id:UUID
+
+class UserDetails(BaseModel):
+    user_id:UUID
+    role:str

@@ -5,7 +5,7 @@ from app.db.database import get_db
 from app.models.user import User
 from app.core.security import decode_access_token
 
-router = APIRouter()
+router = APIRouter(prefix="/auth")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login") # this responsible for the authorize button in the docs
 # @router.get("/users/me")

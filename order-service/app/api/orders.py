@@ -1,8 +1,11 @@
+
+from uuid import UUID
+
 from fastapi import APIRouter,Depends
-from app.schemas.order import CreateOrderRequest
+from app.schemas.order import CreateOrderRequest,CancelOrderRequest
 import httpx
 from app.services.product_client import ProductClient
-from app.core.dependency import get_http_client,get_product_client
+from app.core.dependency import get_http_client,get_product_client,RoleChecker,UserRole
 from app.db.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repository.order_repo import OrderRepository
@@ -21,9 +24,33 @@ def get_order_service(db:AsyncSession=Depends(get_db),
 @router.post("/create-order")
 async def create_order(
     payload:CreateOrderRequest,
-    order_service:OrderService = Depends(get_order_service)
+    order_service:OrderService = Depends(get_order_service),
+    current_user_id = Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))
     ):
-    user_id = payload.user_id
+    # user_id = payload.user_id
     order_items = payload.items
-    return await order_service.create_order(user_id,order_items)
-    
+    return await order_service.create_order(current_user_id,order_items)
+
+@router.post("{order_id}/cancel_order")
+async def cancel_order(
+    order_id:UUID,
+    order_service:OrderService = Depends(get_order_service),
+    current_user_id = Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))
+):
+    return await order_service.cancel_order(current_user_id,order_id)
+
+# @router.get("/")
+# async def get_order_by_id(
+#     id:UUID,
+#     order_service:OrderService=Depends(get_order_service)
+# ):
+#     return await order_service.get
+
+@router.get("/my_orders")
+async def get_my_orders(
+    current_user_id = Depends(RoleChecker(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))),
+    order_service:OrderService = Depends(get_order_service)
+):
+    return await order_service.get_user_orders(current_user_id)
+
+router.get("/{id}/")

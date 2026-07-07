@@ -11,8 +11,12 @@ from app.services.auth_service import authenticate_user
 from app.core.config import settings
 import httpx
 from app.core.security import create_access_token,hash_password,create_password_reset_token,create_refresh_token
-router = APIRouter()
+router = APIRouter(prefix="/auth")
 
+# dont forget to change the redirect url in the google app 
+@router.get("/login")
+def login_page():
+    return {"welcome to login page"}
 @router.post("/login",response_model=TokenResponse)
 def login_with_password(user:UserLogin, response: Response, db: Session = Depends(get_db)):
     user = authenticate_user(user, db)
@@ -155,7 +159,7 @@ def verify_email(token:str,db:Session=Depends(get_db)):
     user.is_verified = True
     db.commit()
     db.refresh(user)
-    return RedirectResponse(url="/login")
+    return RedirectResponse(url="/auth/login")
 
 
 @router.post("/forgot-password")
@@ -189,7 +193,7 @@ def reset_password(data:ResetPasswordRequest, db:Session=Depends(get_db)):
 @router.get("/refresh-tokens",response_model=TokenResponse)
 def refresh_tokens(request:Request,db:Session=Depends(get_db)):
     refresh_token = request.cookies.get("refresh_token")
-    print(refresh_token)
+    # print(refresh_token)
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Refresh token missing")
     try:
