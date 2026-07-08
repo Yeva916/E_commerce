@@ -13,6 +13,7 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
     
     def __call__(self,x_user_role:Annotated[str|None,Header()]=None):
+        # print(x_user_role)
         if not x_user_role:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
