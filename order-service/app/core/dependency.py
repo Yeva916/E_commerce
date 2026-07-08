@@ -27,9 +27,10 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
     
     def __call__(self,
-                 x_user_role:Annotated[str|None,Header(...,alias="x_user_role")]=None,
-                 x_user_id:Annotated[UUID|None,Header(...,alias="x_user_id")]=None
+                 x_user_role:Annotated[str|None,Header()]=None,
+                 x_user_id:Annotated[UUID|None,Header()]=None
                  ):
+        print(x_user_role,x_user_id)
         if x_user_role not in self.allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

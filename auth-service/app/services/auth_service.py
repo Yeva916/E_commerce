@@ -37,6 +37,9 @@ def authenticate_user(user,db):
     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 
 
+async def get_user_by_id(user_id,db):
+    query = db.query(User).fliter
+
 
 def send_verification_email(to_email:str, verification_token:str):
     verification_link = f"{settings.base_url}/verify-email?token={verification_token}"

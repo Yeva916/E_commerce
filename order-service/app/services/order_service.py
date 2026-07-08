@@ -8,6 +8,7 @@ from app.core.utils import cal_total_amount
 from uuid import UUID
 from typing import List
 from app.models.order import OrderStatus
+# from app.core.utils import OrderStatus
 class OrderService:
     def __init__(self,order_repository:OrderRepository,product_client:ProductClient,http_client:httpx.AsyncClient):
         self.order_repository = order_repository
@@ -30,8 +31,6 @@ class OrderService:
                              for item in items}
         
         try:
-            
-            
             products = await self.product_client.get_stock(self.http_client,product_ids)
             # print(type(products[0]))
             for product in products:
@@ -71,29 +70,35 @@ class OrderService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="An error occurred while creating your order."
         )
-            
-            
-
 
     async def get_order(self,order_id):
         try:
-            self.order_repository.get_order_by_id(order_id=order_id)
+            return await self.order_repository.get_order_by_id(order_id=order_id)
         except:
             print("Error while fetching order")
 
     async def get_user_orders(self,user_id):
         try:
-            self.order_repository.get_order_by_user(user_id)
+            return await self.order_repository.get_order_by_user(user_id)
         except:
             print("Error while fetching the order details of the user")
 
     async def cancel_order(self,current_user_id,order_id):
-        order_owner_id = await self.order_repository.get_user_id_of_order(order_id)
-        self.is_authorized(current_user_id,order_owner_id)
+        # order_owner_id = await self.order_repository.get_user_id_of_order(order_id)
+        order = await self.order_repository.get_order_by_id(order_id)
+        # print(order.id,order.status)
+        if order.status == OrderStatus.CANCELLED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Order has already been cancelled."
+            )
+        # print(order_owner_id,current_user_id)
+        self.is_authorized(current_user_id,order.user_id)
         try:
             order_items = await self.order_repository.get_order_items_by_order_id(order_id)
             payload = [ReleaseSchema(product_id=item.product_id,quantity=item.quantity) for item in order_items]
             updated_items = await self.product_client.release_stock(self.http_client,payload)
+            await self.order_repository.update_order_status(order_id=order_id,status=OrderStatus.CANCELLED)
 
         except Exception as e:
              print(f"Unexpected error while creating order: {e}")

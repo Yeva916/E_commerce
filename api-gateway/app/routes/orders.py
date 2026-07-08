@@ -7,6 +7,7 @@ router = APIRouter(
     tags=["Order Gateway"]
 )
 
+
 @router.api_route(
     "/{path:path}",
     methods=["GET","POST","PUT","DELETE","PATCH"]
@@ -19,6 +20,7 @@ async def order_proxy(
     header = dict(request.headers)
 
     if hasattr(request.state,"user"):
+        print(request.state.user["role"])
         header["X-User-ID"] = str(
             request.state.user["id"]
         )
@@ -26,6 +28,10 @@ async def order_proxy(
         header["X-User-Role"] = (
             request.state.user["role"]
         )
+        header["X-User-Email"]=(
+            request.state.user["email"]
+        )
+        
     shared_client = request.app.state.http_client
     response = await order_request(
         client=shared_client,

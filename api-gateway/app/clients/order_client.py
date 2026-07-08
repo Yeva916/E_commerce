@@ -9,6 +9,7 @@ async def order_request(
         params=None,
         headers=None
 ):
+    # print(headers)
     response = await client.request(
         method=method,
         url=f"{settings.order_service_url}/orders/{path}",

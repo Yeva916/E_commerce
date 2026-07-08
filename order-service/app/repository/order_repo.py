@@ -51,13 +51,14 @@ class OrderRepository:
     async def get_user_id_of_order(self,order_id):
         query = select(Orders).where(Orders.id == order_id)
         result = await self.db.execute(query)
-        return result.scalars().first()
+        order = result.scalars().first()
+        return order.user_id
 
     async def update_order_status(self,order_id,status):
         order = await self.get_order_by_id(order_id)
         order.status = status
-        self.db.commit()
-        self.db.refresh(order)
+        await self.db.commit()
+        await self.db.refresh(order)
         return "status updated successfully"
 
     # async def cancel_order(self,order_id):

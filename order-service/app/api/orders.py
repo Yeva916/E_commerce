@@ -31,7 +31,7 @@ async def create_order(
     order_items = payload.items
     return await order_service.create_order(current_user_id,order_items)
 
-@router.post("{order_id}/cancel_order")
+@router.post("/{order_id}/cancel_order")
 async def cancel_order(
     order_id:UUID,
     order_service:OrderService = Depends(get_order_service),
@@ -48,7 +48,7 @@ async def cancel_order(
 
 @router.get("/my_orders")
 async def get_my_orders(
-    current_user_id = Depends(RoleChecker(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))),
+    current_user_id = Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER])),
     order_service:OrderService = Depends(get_order_service)
 ):
     return await order_service.get_user_orders(current_user_id)
