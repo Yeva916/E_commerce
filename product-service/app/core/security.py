@@ -1,5 +1,5 @@
 from typing import Annotated,List
-from fastapi import Header,HTTPException,status,Depends
+from fastapi import Header,HTTPException,status
 from enum import Enum
 
 
@@ -7,6 +7,7 @@ class UserRole(str,Enum):
     ADMIN="admin"
     CUSTOMER="user"
     SERVICE="service"
+    OWNER="owner"
 
 class RoleChecker:
     def __init__(self,allowed_roles:List[UserRole]):

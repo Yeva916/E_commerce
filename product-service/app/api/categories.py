@@ -7,7 +7,7 @@ from app.repository.category_repository import CategoryRepository
 from app.core.security import RoleChecker,UserRole
 
 router = APIRouter(
-    prefix="/categories",
+    prefix="/products/categories",
     tags=["categories"]
 )
 
@@ -15,13 +15,13 @@ def get_category_service(db:AsyncSession=Depends(get_db)):
     category_repo = CategoryRepository(db)
     return CategoryService(category_repo)
 
-@router.get("/",response_model=list[CategoryResponse],dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))])
+@router.get("/",response_model=list[CategoryResponse],dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER,UserRole.OWNER]))])
 async def get_categories(category_service:CategoryService=Depends(get_category_service)):
     categories = await category_service.get_all_categories()
     return categories
 
 
-@router.post("/",response_model=CategoryResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
+@router.post("/create",response_model=CategoryResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.OWNER]))])
 async def create_category(
                         category: InputCategory,
                         category_service:CategoryService=Depends(get_category_service)
@@ -31,16 +31,15 @@ async def create_category(
     return created_category
 
 
-@router.get("/{category_id}",response_model=CategoryResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))])
+@router.get("/{category_id}",response_model=CategoryResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER,UserRole.OWNER]))])
 async def get_category(
     category_id:int,
     category_service:CategoryService=Depends(get_category_service)
     ):
-
     category = await category_service.get_category_by_id(category_id)
     return category
 
-@router.put("/{category_id}",response_model=CategoryResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
+@router.put("/{category_id}",response_model=CategoryResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.OWNER]))])
 async def update_category(
     category_id:int,
     category: InputCategory,
@@ -49,7 +48,7 @@ async def update_category(
     updated_category = await category_service.update_category(category_id, category)
     return updated_category
 
-@router.delete("/{category_id}",response_model=CategoryResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
+@router.put("/{category_id}/archive",response_model=CategoryResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.OWNER]))])
 async def delete_category(
     category_id:int,
     category_service:CategoryService=Depends(get_category_service)

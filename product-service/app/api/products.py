@@ -47,21 +47,21 @@ async def get_products(
     return results
 
 
-@router.post("/",response_model=list[ProductResponse],dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
+@router.post("/create",response_model=list[ProductResponse],dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.OWNER]))])
 async def create_product(product_data:list[ProductCreate],
                          product_service:ProductService=Depends(get_product_service)):
     created_product = await product_service.create_product(product_data)
     return created_product
 
 
-@router.get("/{product_id}",response_model=ProductResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))])
+@router.get("/{product_id}",response_model=ProductResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER,UserRole.OWNER]))])
 async def get_product(product_id:UUID,
                       product_service:ProductService=Depends(get_product_service)):
     result = await product_service.get_product_by_id(product_id)
     return result
 
 
-@router.put("/{product_id}",response_model=ProductResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
+@router.patch("/{product_id}",response_model=ProductResponse,dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.OWNER]))])
 async def update_product(product_id:UUID,
                          product_data:ProductUpdate,
                          product_service:ProductService=Depends(get_product_service)
@@ -70,13 +70,13 @@ async def update_product(product_id:UUID,
     return updated_product
 
 
-@router.put("/{product_id}/archive",dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
+@router.patch("/{product_id}/archive",dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.OWNER]))])
 async def delete_product(product_id:UUID,
                          product_service:ProductService=Depends(get_product_service)):
     archive_product = await product_service.archive_product(product_id)
     return archive_product
 
-@router.post("/{product_id}/increase-stock",dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
+@router.patch("/{product_id}/increase-stock",dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.OWNER]))])
 async def increase_stock(product_id:UUID,
                         data:ChangeStockQuantity,
                         product_service:ProductService=Depends(get_product_service)
@@ -84,7 +84,7 @@ async def increase_stock(product_id:UUID,
     updated_stock = await product_service.increase_stock(product_id,data.quantity)
     return updated_stock
 
-@router.post("/{product_id}/decrease-stock",dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
+@router.patch("/{product_id}/decrease-stock",dependencies=[Depends(RoleChecker([UserRole.ADMIN,UserRole.OWNER]))])
 async def increase_stock(product_id:UUID,
                         data:ChangeStockQuantity,
                         product_service:ProductService=Depends(get_product_service)

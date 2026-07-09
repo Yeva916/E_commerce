@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from app.db.database import Base
 from enum import Enum
 import uuid
-from sqlalchemy import TIMESTAMP, Boolean, Column, Integer, String, text,Enum as SQLEnum
+from sqlalchemy import TIMESTAMP, Boolean, Column, String, text,Enum as SQLEnum
 # from sqlalchemy.types import Enum as SQLEnum
 
 class AuthProvider(Enum):

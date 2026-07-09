@@ -1,10 +1,10 @@
 PUBLIC_ROUTES = [
-
+    ("GET","/"),
     ("POST","/api/auth/login"),
     ("GET","/api/auth/login/google"),
     ("GET","/api/auth/google/callback"),
 
-    ("","/api/auth/register"),
+    ("POST","/api/auth/register"),
 
     ("GET","/api/auth/verify-email"),
 

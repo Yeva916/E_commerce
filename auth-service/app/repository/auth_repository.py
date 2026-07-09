@@ -13,9 +13,7 @@ class AuthRepository:
         return result.scalars().first()
 
     async def create_user(self,user):
-        # print("hi")
         is_email_used = await self.get_user_by_email(user.email)
-        # print(is_email_used)
         if is_email_used:
             raise ValueError("Email is already used")
         user_data = user.dict()
@@ -44,11 +42,11 @@ class AuthRepository:
                 username=username,
                 auth_provider=AuthProvider.GOOGLE,
                 provider_user_id=google_id,
-                is_verified=True  # Google users are pre-verified
+                is_verified=True
             )
             self.db.add(user)
-            await self.db.commit()          # Await the commit for the new user insertion
-            await self.db.refresh(user)     # Await the refresh to populate the DB-generated fields (like ID)
+            await self.db.commit()        
+            await self.db.refresh(user)     
         return user
     
     async def update_user_details(self,email,user_data):
@@ -57,7 +55,7 @@ class AuthRepository:
         user = result.scalars().first()
         if user is None:
             return None
-        # update_data = user_data.model_dump(exclude_unset=True)
+
         for key,value in user_data.items():
             if hasattr(user,key):
                 setattr(user,key,value)

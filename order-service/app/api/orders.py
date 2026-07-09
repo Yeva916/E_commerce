@@ -25,7 +25,7 @@ def get_order_service(db:AsyncSession=Depends(get_db),
 async def create_order(
     payload:CreateOrderRequest,
     order_service:OrderService = Depends(get_order_service),
-    current_user_id = Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))
+    current_user_id = Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER,UserRole.OWNER]))
     ):
     # user_id = payload.user_id
     order_items = payload.items
@@ -35,7 +35,7 @@ async def create_order(
 async def cancel_order(
     order_id:UUID,
     order_service:OrderService = Depends(get_order_service),
-    current_user_id = Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER]))
+    current_user_id = Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER,UserRole.OWNER]))
 ):
     return await order_service.cancel_order(current_user_id,order_id)
 
@@ -48,7 +48,7 @@ async def cancel_order(
 
 @router.get("/my_orders")
 async def get_my_orders(
-    current_user_id = Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER])),
+    current_user_id = Depends(RoleChecker([UserRole.ADMIN,UserRole.CUSTOMER,UserRole.OWNER])),
     order_service:OrderService = Depends(get_order_service)
 ):
     return await order_service.get_user_orders(current_user_id)

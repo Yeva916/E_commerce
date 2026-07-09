@@ -9,7 +9,9 @@ async def product_request(
         params=None,
         headers=None
 ):
+    
     clean_path = path.lstrip("/")
+    print(f"{settings.product_service_url}/products/{clean_path}",params)
     response = await client.request(
         method=method,
         url=f"{settings.product_service_url}/products/{clean_path}",

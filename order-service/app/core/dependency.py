@@ -10,6 +10,7 @@ class UserRole(str,Enum):
     ADMIN="admin"
     CUSTOMER="user"
     SERVICE="service"
+    OWNER="owner"
 # The global singletons container dictionary
 clients_state = {}
 

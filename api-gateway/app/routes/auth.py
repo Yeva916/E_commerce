@@ -19,6 +19,20 @@ async def auth_proxy(
     headers = dict(request.headers)
     headers.pop("host",None)
 
+    if hasattr(request.state,"user"):
+        print(request.state.user["role"])
+        headers["X-User-ID"] = str(
+            request.state.user["id"]
+        )
+    
+        headers["X-User-Role"] = (
+            request.state.user["role"]
+        )
+        headers["X-User-Email"]=(
+            request.state.user["email"]
+        )
+
+
     shared_client = request.app.state.http_client
     # print(path)
     response = await auth_request(

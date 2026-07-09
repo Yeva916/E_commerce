@@ -3,7 +3,7 @@ from fastapi import Depends
 
 from app.core.security import create_verification_token
 
-# from app.services.auth_service import create_user,send_verification_email
+
 from app.services.auth_service import AuthService
 from app.api.dependency import get_auth_service
 from app.schemas.user import UserCreate, UserResponse

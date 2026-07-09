@@ -31,7 +31,6 @@ async def login_with_password(user:UserLogin, response: Response,auth_service:Au
 
 @router.get("/login/google")
 def login_with_google():
-    # Implement Google OAuth login logic here
     google_auth_url = (
         "https://accounts.google.com/o/oauth2/v2/auth"
         f"?client_id={settings.google_client_id}"
@@ -133,52 +132,13 @@ async def google_callback(response:Response,code:str=None,
         }
 
 @router.get("/verify-email")
-async def verify_email(token:str,auth_service:AuthService=Depends(get_auth_service)):
-    # try:
-    #     print(token)
-    #     token = token.strip().strip('"')
-    #     payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-    #     # payload = payload.strip('"')
-
-    #     print(payload)
-    # except JWTError:
-    #     raise HTTPException(status_code=400, detail="Invalid or expired token")
-
-    # email = payload.get("sub")
-    # if not email:
-    #     raise HTTPException(status_code=400, detail="Invalid token payload")
-    
-    # # user = db.query(User).filter(User.email == email).first()
-    # # if not user:
-    # #     raise HTTPException(status_code=404, detail="User not found")
-    # # if user.is_verified:
-    # #     return {"message": "Email is already verified"}
-    # # user.is_verified = True
-    # # db.commit()
-    # # db.refresh(user)
-    # # return RedirectResponse(url="/auth/login")
-    # user = await auth_service.get_user_by_email(email)
-    # if not user:
-    #     raise HTTPException(status_code=404, detail="User not found")
-    
-    # if user.is_verified:
-    #     return {"message": "Email is already verified"}
-    
+async def verify_email(token:str,auth_service:AuthService=Depends(get_auth_service)):    
     await auth_service.verify_user_email(token)
     return RedirectResponse(url="/auth/login")
 
 
 @router.post("/forgot-password")
 async def forgot_password(data:ForgotPasswordRequest,auth_service:AuthService=Depends(get_auth_service)):
-    # user = auth_service.get_user_by_email(data.email)
-    # if not user:
-    #     raise HTTPException(status_code=404, detail="User with this email does not exist")
-    
-    # # Generate password reset token
-    # reset_token = create_password_reset_token(user.email)
-    # # Here you would send the reset token to the user's email address
-    # # For demonstration, we'll just return the token in the response -> need to implement email sending logic here
-    # return {"message": "Password reset token generated. Please check your email.", "reset_token": reset_token}
     return await auth_service.generate_reset_token(data.email)
 
 @router.post("/{token_id}/reset-password")
@@ -186,38 +146,15 @@ async def reset_password(
                         token_id:str,
                         data:ResetPasswordRequest, 
                         auth_service:AuthService=Depends(get_auth_service)):
-    # try:
-    #     payload = jwt.decode(data.token.strip().strip('"'), settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-    #     email:str = payload.get("sub")
-    # except JWTError:
-    #     raise HTTPException(status_code=400, detail="Invalid or expired token")
-
-    # user = auth_service.get
-    # if not user:
-    #     raise HTTPException(status_code=404, detail="User with this email does not exist")
-    # user.hashed_password = hash_password(data.new_password)
-    # db.commit()
-    # db.refresh(user)
-    # return {"message": "Password reset successful"}
+    
     return await auth_service.reset_password(token_id,data)
 
 @router.get("/refresh-tokens",response_model=TokenResponse)
 async def refresh_tokens(request:Request,auth_service:AuthService=Depends(get_auth_service)):
     refresh_token = request.cookies.get("refresh_token")
-    # print(refresh_token)
+
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Refresh token missing")
-    # try:
-    #     payload = jwt.decode(refresh_token.strip().strip('"'), settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-    #     user_id:str = payload.get("sub")
-    #     email:str = payload.get("email")
-    # except JWTError:
-    #     raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
-    # user = db.query(User).filter(User.email == email).first()
-    # if not user:
-    #     raise HTTPException(status_code=404, detail="User not found")
-    
-    # new_access_token = create_access_token(TokenPayload(sub=user.id,email=user.email,role=user.role).model_dump())
     new_access_token = await auth_service.get_access_tokens_from_refresh_tokens(refresh_token)
     return TokenResponse(access_token=new_access_token, token_type="bearer")
 

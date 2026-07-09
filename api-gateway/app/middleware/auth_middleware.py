@@ -18,7 +18,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         token = request.headers.get(
             "Authorization"
         )
-
+        
         if not token:
             raise HTTPException(
                 401,"Missing token"
@@ -27,8 +27,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
         token = token.replace(
             "Bearer ",""
         )
-
+        # print(token)
         payload = verify_token(token)
+
+        # print(payload)
         
         if payload is None:
             raise HTTPException(
