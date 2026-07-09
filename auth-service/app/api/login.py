@@ -1,16 +1,13 @@
 
 from fastapi import APIRouter, Depends, HTTPException,Response,Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
-from app.db.database import get_db
-from app.schemas.token import Token, TokenPayload, TokenResponse
+from app.schemas.token import TokenPayload, TokenResponse
 from app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest, UserLogin
-from jose import jwt, JWTError
-from app.models.user import User, AuthProvider
-from app.services.auth_service import authenticate_user
+from app.services.auth_service import AuthService
 from app.core.config import settings
 import httpx
-from app.core.security import create_access_token,hash_password,create_password_reset_token,create_refresh_token
+from app.api.dependency import get_auth_service
+from app.core.security import create_access_token,create_refresh_token
 router = APIRouter(prefix="/auth")
 
 # dont forget to change the redirect url in the google app 
@@ -18,8 +15,8 @@ router = APIRouter(prefix="/auth")
 def login_page():
     return {"welcome to login page"}
 @router.post("/login",response_model=TokenResponse)
-def login_with_password(user:UserLogin, response: Response, db: Session = Depends(get_db)):
-    user = authenticate_user(user, db)
+async def login_with_password(user:UserLogin, response: Response,auth_service:AuthService=Depends(get_auth_service)):
+    user = await auth_service.authenticate_user(user)
     
     access_token = user.access_token
     refresh_token = user.refresh_token
@@ -47,7 +44,7 @@ def login_with_google():
 @router.get("/google/callback")
 async def google_callback(response:Response,code:str=None,
                     error:str=None,
-                    db:Session=Depends(get_db)):
+                    auth_service:AuthService=Depends(get_auth_service)):
     if error:
         raise HTTPException(status_code=400, detail=f"Google authentication failed: {error}")
     if not code:
@@ -84,33 +81,33 @@ async def google_callback(response:Response,code:str=None,
         google_id = google_user.get("id")
         username = google_user.get("name")
         
-        user = db.query(User).filter(User.email == email).first()
+        # user = db.query(User).filter(User.email == email).first()
 
-        if user:
-            need_commit = False
-            if hasattr(user,"auth_provider") and user.auth_provider!= AuthProvider.GOOGLE:
-                user.auth_provider = AuthProvider.GOOGLE
-                user.provider_user_id = google_id
-                need_commit = True
-                # db.commit()
-            if hasattr(user,"is_verified") and not user.is_verified:
-                user.is_verified = True
-                need_commit = True
-            if need_commit:
-                db.commit()
-                db.refresh(user)
-        else:
-            user = User(
-                email=email,
-                username=username,
-                auth_provider=AuthProvider.GOOGLE,
-                provider_user_id=google_id,
-                is_verified = 1
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        
+        # if user:
+        #     need_commit = False
+        #     if hasattr(user,"auth_provider") and user.auth_provider!= AuthProvider.GOOGLE:
+        #         user.auth_provider = AuthProvider.GOOGLE
+        #         user.provider_user_id = google_id
+        #         need_commit = True
+        #         # db.commit()
+        #     if hasattr(user,"is_verified") and not user.is_verified:
+        #         user.is_verified = True
+        #         need_commit = True
+        #     if need_commit:
+        #         db.commit()
+        #         db.refresh(user)
+        # else:
+        #     user = User(
+        #         email=email,
+        #         username=username,
+        #         auth_provider=AuthProvider.GOOGLE,
+        #         provider_user_id=google_id,
+        #         is_verified = 1
+        #     )
+        #     db.add(user)
+        #     db.commit()
+        #     db.refresh(user)
+        user = auth_service.authenticate_or_register_google_user(email,google_id,username)
         payload = TokenPayload(sub=user.id,email=user.email,role=user.role).model_dump()
 
         jwt_token = create_access_token(payload)
@@ -136,78 +133,92 @@ async def google_callback(response:Response,code:str=None,
         }
 
 @router.get("/verify-email")
-def verify_email(token:str,db:Session=Depends(get_db)):
-    try:
-        print(token)
-        token = token.strip().strip('"')
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-        # payload = payload.strip('"')
+async def verify_email(token:str,auth_service:AuthService=Depends(get_auth_service)):
+    # try:
+    #     print(token)
+    #     token = token.strip().strip('"')
+    #     payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+    #     # payload = payload.strip('"')
 
-        print(payload)
-    except JWTError:
-        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    #     print(payload)
+    # except JWTError:
+    #     raise HTTPException(status_code=400, detail="Invalid or expired token")
 
-    email = payload.get("sub")
-    if not email:
-        raise HTTPException(status_code=400, detail="Invalid token payload")
+    # email = payload.get("sub")
+    # if not email:
+    #     raise HTTPException(status_code=400, detail="Invalid token payload")
     
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.is_verified:
-        return {"message": "Email is already verified"}
-    user.is_verified = True
-    db.commit()
-    db.refresh(user)
+    # # user = db.query(User).filter(User.email == email).first()
+    # # if not user:
+    # #     raise HTTPException(status_code=404, detail="User not found")
+    # # if user.is_verified:
+    # #     return {"message": "Email is already verified"}
+    # # user.is_verified = True
+    # # db.commit()
+    # # db.refresh(user)
+    # # return RedirectResponse(url="/auth/login")
+    # user = await auth_service.get_user_by_email(email)
+    # if not user:
+    #     raise HTTPException(status_code=404, detail="User not found")
+    
+    # if user.is_verified:
+    #     return {"message": "Email is already verified"}
+    
+    await auth_service.verify_user_email(token)
     return RedirectResponse(url="/auth/login")
 
 
 @router.post("/forgot-password")
-def forgot_password(data:ForgotPasswordRequest, db:Session=Depends(get_db)):
-    user = db.query(User).filter(User.email == data.email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User with this email does not exist")
+async def forgot_password(data:ForgotPasswordRequest,auth_service:AuthService=Depends(get_auth_service)):
+    # user = auth_service.get_user_by_email(data.email)
+    # if not user:
+    #     raise HTTPException(status_code=404, detail="User with this email does not exist")
     
-    # Generate password reset token
-    reset_token = create_password_reset_token(user.email)
-    # Here you would send the reset token to the user's email address
-    # For demonstration, we'll just return the token in the response -> need to implement email sending logic here
-    return {"message": "Password reset token generated. Please check your email.", "reset_token": reset_token}
+    # # Generate password reset token
+    # reset_token = create_password_reset_token(user.email)
+    # # Here you would send the reset token to the user's email address
+    # # For demonstration, we'll just return the token in the response -> need to implement email sending logic here
+    # return {"message": "Password reset token generated. Please check your email.", "reset_token": reset_token}
+    return await auth_service.generate_reset_token(data.email)
 
-@router.post("/reset-password")
-def reset_password(data:ResetPasswordRequest, db:Session=Depends(get_db)):
-    try:
-        payload = jwt.decode(data.token.strip().strip('"'), settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-        email:str = payload.get("sub")
-    except JWTError:
-        raise HTTPException(status_code=400, detail="Invalid or expired token")
+@router.post("/{token_id}/reset-password")
+async def reset_password(
+                        token_id:str,
+                        data:ResetPasswordRequest, 
+                        auth_service:AuthService=Depends(get_auth_service)):
+    # try:
+    #     payload = jwt.decode(data.token.strip().strip('"'), settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+    #     email:str = payload.get("sub")
+    # except JWTError:
+    #     raise HTTPException(status_code=400, detail="Invalid or expired token")
 
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User with this email does not exist")
-    user.hashed_password = hash_password(data.new_password)
-    db.commit()
-    db.refresh(user)
-    return {"message": "Password reset successful"}
+    # user = auth_service.get
+    # if not user:
+    #     raise HTTPException(status_code=404, detail="User with this email does not exist")
+    # user.hashed_password = hash_password(data.new_password)
+    # db.commit()
+    # db.refresh(user)
+    # return {"message": "Password reset successful"}
+    return await auth_service.reset_password(token_id,data)
 
 @router.get("/refresh-tokens",response_model=TokenResponse)
-def refresh_tokens(request:Request,db:Session=Depends(get_db)):
+async def refresh_tokens(request:Request,auth_service:AuthService=Depends(get_auth_service)):
     refresh_token = request.cookies.get("refresh_token")
     # print(refresh_token)
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Refresh token missing")
-    try:
-        payload = jwt.decode(refresh_token.strip().strip('"'), settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-        user_id:str = payload.get("sub")
-        email:str = payload.get("email")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    # try:
+    #     payload = jwt.decode(refresh_token.strip().strip('"'), settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+    #     user_id:str = payload.get("sub")
+    #     email:str = payload.get("email")
+    # except JWTError:
+    #     raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    # user = db.query(User).filter(User.email == email).first()
+    # if not user:
+    #     raise HTTPException(status_code=404, detail="User not found")
     
-    new_access_token = create_access_token(TokenPayload(sub=user.id,email=user.email,role=user.role).model_dump())
-
+    # new_access_token = create_access_token(TokenPayload(sub=user.id,email=user.email,role=user.role).model_dump())
+    new_access_token = await auth_service.get_access_tokens_from_refresh_tokens(refresh_token)
     return TokenResponse(access_token=new_access_token, token_type="bearer")
 
 
