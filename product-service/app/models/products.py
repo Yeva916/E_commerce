@@ -1,7 +1,8 @@
 from app.db.database import Base
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, Integer, String,Datetime
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String,DateTime
 import uuid
+from sqlalchemy.orm import relationship
 from datetime import datetime,timezone
 class Product(Base):
     __tablename__ = "products"
@@ -14,10 +15,13 @@ class Product(Base):
     name = Column(String,unique=True,index=True)
     description = Column(String)
     price = Column(Integer)
-    category_id = Column(Integer)
+    category_id = Column(Integer,ForeignKey("categories.id",ondelete="CASCADE"),nullable=False)
     stock_quantity = Column(Integer)
     image_url = Column(String)
-    created_at = Column(Datetime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(Datetime, 
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), 
                         default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc))
+    
+    category = relationship("Category")

@@ -8,6 +8,9 @@ class ProductCreate(BaseModel):
     description: str
     price: float
     category_id: int
+    stock_quantity:int
+    image_url:str
+
 
 class ProductResponse(BaseModel):
     id: UUID
@@ -16,3 +19,18 @@ class ProductResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+class ProductUpdate(BaseModel):
+    name:str|None=None
+    description:str|None=None
+    price:float|None=None
+    image_url:str|None=None
+    stock_quantity:int|None=None
+    category_id:int|None=None
+    is_active:bool|None=None
+    
+    # class Config:
+    #     from_attribute = True
+
+class ChangeStockQuantity(BaseModel):
+    quantity:int

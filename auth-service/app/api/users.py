@@ -1,43 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
-from app.db.database import get_db
+from uuid import UUID
+from app.api.dependency import read_current_user
+from fastapi import APIRouter, Depends
 from app.models.user import User
-from app.core.security import decode_access_token
+from app.core.security import RoleChecker, UserRole
+from app.services.auth_service import AuthService
+from app.api.dependency import get_auth_service
+router = APIRouter(prefix="/auth")
 
-router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login") # this responsible for the authorize button in the docs
-# @router.get("/users/me")
-def read_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    payload = decode_access_token(token)
-    if payload is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user_id= int(payload.get("sub"))
-  
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user
 
 @router.get("/users/me")
 def get_me(current_user: User = Depends(read_current_user)):
     return current_user
+
+@router.post("/users/{user_id}/promote",dependencies=[Depends(RoleChecker([UserRole.OWNER]))])
+async def promote_to_admin(
+    user_id:UUID,
+    auth_service:AuthService=Depends(get_auth_service)
+):
+    return await auth_service.promote_user_to_admin(user_id)
+
+@router.post("/users/{user_id}/demote",dependencies=[Depends(RoleChecker([UserRole.OWNER]))])
+async def demote_to_user(
+        user_id:UUID,
+        auth_service:AuthService=Depends(get_auth_service)
+):
+    return await auth_service.demote_admin_to_user(user_id)

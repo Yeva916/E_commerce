@@ -1,4 +1,6 @@
 
+from uuid import UUID
+
 from pydantic import BaseModel, Field,EmailStr,model_validator
 
 
@@ -9,10 +11,10 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     message: str
-    id: int
+    id: UUID
     email: str
     username: str
-
+    email_token:str
     class Config:
         from_attributes = True
 
@@ -24,7 +26,6 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 class ResetPasswordRequest(BaseModel):
-    token: str
     new_password: str = Field(..., min_length=8 ,max_length=72)
     confirm_password: str = Field(..., min_length=8 ,max_length=72)
 
