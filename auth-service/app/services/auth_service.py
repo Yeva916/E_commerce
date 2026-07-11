@@ -1,4 +1,3 @@
-# from app.models.user import User
 from app.core.security import create_access_token, create_refresh_token, hash_password, verify_password,create_password_reset_token,UserRole
 from app.schemas.token import TokenPayload,Token
 # import resend
@@ -7,14 +6,16 @@ from app.core.config import settings
 from fastapi import HTTPException
 from app.repository.auth_repository import AuthRepository
 from app.schemas.user import UserCreate, UserLogin,ResetPasswordRequest
-from app.services.email_services import AsyncEmailService
+from app.events.publisher import EventPublisher
 from jose import jwt, JWTError
+from contracts.events.event_types import EventType
+from contracts.events.registry import EVENT_REGISTRY
 
 
 class AuthService:
-    def __init__(self,auth_repository:AuthRepository,email_service:AsyncEmailService):
+    def __init__(self,auth_repository:AuthRepository,publisher:EventPublisher):
         self.auth_repository = auth_repository
-        self.email_service = email_service
+        self.publisher = publisher
 
     def decode(self,tokens):
         try:
@@ -41,10 +42,18 @@ class AuthService:
         return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
     
     async def send_verification_email(self,to_email:str,verification_token:str):
-        return await self.email_service.send_verification_email(to_email,verification_token)
+        class_ = EVENT_REGISTRY[EventType.USER_REGISTERED]
+        event = class_(
+            email = to_email,
+            verification_token=verification_token
+        )
+        await self.publisher.publish(
+            queue_name="email_queue",
+            event=event
+            )
     
-    async def send_password_reset_email(self,to_emial:str,reset_token:str):
-        return await self.email_service.send_password_reset_email(to_emial,reset_token)
+    # async def send_password_reset_email(self,to_emial:str,reset_token:str):
+    #     return await self.email_service.send_password_reset_email(to_emial,reset_token)
 
     async def authenticate_or_register_google_user(self,email,google_id,username):
         return await self.auth_repository.authenticate_or_register_google_user(email,google_id,username)

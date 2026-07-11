@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     resend_api_key:str
     base_url:str
     refresh_token_expire_days:int
+    rabbitmq_url:str
     class Config:
         env_file = ".env"
         case_sensitive = False

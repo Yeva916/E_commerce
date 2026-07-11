@@ -1,0 +1,26 @@
+notification-service/
+
+app/
+├── consumers/
+│   ├── consumer.py
+│   └── message_dispatcher.py
+│
+├── handlers/
+│   ├── user_registered_handler.py
+│   ├── password_reset_handler.py
+│   └── order_created_handler.py
+│
+├── services/
+│   ├── email_service.py
+│   └── template_service.py
+│
+├── events/
+│   ├── event_types.py
+│   └── schemas.py
+│
+├── core/
+│   ├── config.py
+│   ├── rabbitmq.py
+│   └── logger.py
+│
+└── main.py
