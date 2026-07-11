@@ -1,0 +1,9 @@
+from enum import Enum
+
+class EventType(str,Enum):
+    
+    USER_REGISTERED = "USER_REGISTERED"
+    PASSWORD_RESET = "PASSWORD_RESET"
+    ORDER_CREATED = "ORDER_CREATED"
+
+    

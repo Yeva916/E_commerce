@@ -3,6 +3,7 @@ import httpx
 from app.api import register,login,users
 from app.db.database import engine,Base
 from contextlib import asynccontextmanager
+from app.api.dependency import rabbitmq
 # Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
@@ -14,8 +15,11 @@ async def lifespan(app:FastAPI):
     async_client = httpx.AsyncClient()
     app.state.http_client = async_client
     print("✅ Database synchronization complete!")
+    await rabbitmq.connect()
+    print("Publisher is connected")
     yield  
     
+    await rabbitmq.close()
     await async_client.aclose()
     await engine.dispose()
     
