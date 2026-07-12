@@ -8,12 +8,18 @@ from app.core.utils import cal_total_amount
 from uuid import UUID
 from typing import List
 from app.models.order import OrderStatus
+from app.events.publisher import EventPublisher
+from contracts.events.event_types import EventType
+from contracts.events.registry import EVENT_REGISTRY
+
+# from contracts.events.order 
 # from app.core.utils import OrderStatus
 class OrderService:
-    def __init__(self,order_repository:OrderRepository,product_client:ProductClient,http_client:httpx.AsyncClient):
+    def __init__(self,order_repository:OrderRepository,product_client:ProductClient,http_client:httpx.AsyncClient,publisher:EventPublisher):
         self.order_repository = order_repository
         self.product_client = product_client
         self.http_client = http_client
+        self.publisher = publisher
     
     def is_authorized(self,current_user_id,owner_id):
         if owner_id != current_user_id:
@@ -22,8 +28,9 @@ class OrderService:
                     detail="You are not the who owns this order"
                 )
     
-    async def create_order(self,user_id,items:List[Item]):
+    async def create_order(self,user_id,items:List[Item],user_email):
         # user_id = current_user
+        # user = self.order_repository.
         product_ids = [{"product_id":str(item.product_id)} for item in items]
         product_map = {
             item.product_id:{"quantity":item.quantity,
@@ -50,6 +57,16 @@ class OrderService:
                 # order.status = "CONFIRMED"
                 # await self.order_repository.db.commit()
                 await self.order_repository.update_order_status(order.id,OrderStatus.CONFIRMED)
+                class_ = EVENT_REGISTRY[EventType.ORDER_CREATED]
+                event = class_(
+                    order_id=order.id,
+                    email=user_email,
+                    total_amount = total_amount
+                )
+                await self.publisher.publish(
+                    queue_name="email_queue",
+                    event=event
+                )
             except Exception as e:
                 print(f"Stock reservation failed, marking order as FAILED: {e}")
                 # order.status = "FAILED"
@@ -60,10 +77,6 @@ class OrderService:
                     detail="Order placement failed during inventory reservation. Please try again."
             )
             return order_items,updated_products
-            
-        except HTTPException as http_exc:
-        # Pass structured FastAPI HTTP errors straight through
-            raise http_exc
         except Exception as e:
             print(f"Unexpected error while creating order: {e}")
             raise HTTPException(
@@ -83,7 +96,7 @@ class OrderService:
         except:
             print("Error while fetching the order details of the user")
 
-    async def cancel_order(self,current_user_id,order_id):
+    async def cancel_order(self,current_user_id,order_id,user_email):
         # order_owner_id = await self.order_repository.get_user_id_of_order(order_id)
         order = await self.order_repository.get_order_by_id(order_id)
         # print(order.id,order.status)
@@ -99,11 +112,22 @@ class OrderService:
             payload = [ReleaseSchema(product_id=item.product_id,quantity=item.quantity) for item in order_items]
             updated_items = await self.product_client.release_stock(self.http_client,payload)
             await self.order_repository.update_order_status(order_id=order_id,status=OrderStatus.CANCELLED)
-
+            await self.order_repository.update_order_status(order.id,OrderStatus.CONFIRMED)
+            class_ = EVENT_REGISTRY[EventType.ORDER_CANCELLED]
+            event = class_(
+                order_id=order.id,
+                email=user_email,
+                total_amount=order.total_amount
+            )
+            
+            await self.publisher.publish(
+                queue_name="email_queue",
+                event=event
+            )
         except Exception as e:
-             print(f"Unexpected error while creating order: {e}")
+             print(f"Unexpected error while cancelling order: {e}")
              raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An error occurred while creating your order."
+                detail="An error occurred while cancelling your order."
         )
         return updated_items

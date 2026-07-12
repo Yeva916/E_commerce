@@ -10,9 +10,9 @@ class UserRegisteredHandler:
         event: UserRegisteredEvent,
     ):
 
-        print("inside_handler",event.email)
-        print(self.notification_service)
-        print(type(self.notification_service))
+        # print("inside_handler",event.email)
+        # print(self.notification_service)
+        # print(type(self.notification_service))
         await self.notification_service.send_verification_email(
             event=event
         )

@@ -11,3 +11,9 @@ class OrderCreatedEvent(BaseEvent):
     email:EmailStr
     total_amount:float
 
+class OrderCancelEvent(BaseEvent):
+    event_type:EventType = EventType.ORDER_CANCELLED
+    order_id:UUID
+    email:EmailStr
+    total_amount:float
+

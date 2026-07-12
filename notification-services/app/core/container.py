@@ -16,7 +16,9 @@ class ConsumerContainer:
             template_service=self.template_service
         )
         handler = {
-            EventType.USER_REGISTERED:UserRegisteredHandler(self.notificaiton_service)
+            EventType.USER_REGISTERED:UserRegisteredHandler(self.notificaiton_service),
+            EventType.PASSWORD_RESET: PasswordResetHandler(self.notificaiton_service),
+            EventType.ORDER_CREATED: OrderCreatedHandler(self.notificaiton_service),
         }
         self.event_dispatcher = EventDispatcher(handlers=handler)
 

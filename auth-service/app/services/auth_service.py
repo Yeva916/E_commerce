@@ -52,8 +52,18 @@ class AuthService:
             event=event
             )
     
-    # async def send_password_reset_email(self,to_emial:str,reset_token:str):
-    #     return await self.email_service.send_password_reset_email(to_emial,reset_token)
+    async def send_password_reset_email(self,to_email:str,reset_token:str):
+        class_ = EVENT_REGISTRY[EventType.PASSWORD_RESET]
+        # print(reset_token)
+        event = class_(
+            email=to_email,
+            reset_token=reset_token
+        )
+        
+        await self.publisher.publish(
+            queue_name="email_queue",
+            event=event
+        )
 
     async def authenticate_or_register_google_user(self,email,google_id,username):
         return await self.auth_repository.authenticate_or_register_google_user(email,google_id,username)
@@ -100,7 +110,7 @@ class AuthService:
             raise HTTPException(status_code=404, detail="User with this email does not exist")
         
         reset_token = create_password_reset_token(user.email)
-        return {"message": "Password reset token generated. Please check your email.", "reset_token": reset_token}
+        return reset_token
 
 
     async def get_access_tokens_from_refresh_tokens(self,tokens):

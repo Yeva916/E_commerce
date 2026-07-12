@@ -138,8 +138,10 @@ async def verify_email(token:str,auth_service:AuthService=Depends(get_auth_servi
 
 
 @router.post("/forgot-password")
-async def forgot_password(data:ForgotPasswordRequest,auth_service:AuthService=Depends(get_auth_service)):
-    return await auth_service.generate_reset_token(data.email)
+async def forgot_password(data:ForgotPasswordRequest,
+                          auth_service:AuthService=Depends(get_auth_service)):
+    reset_token = await auth_service.generate_reset_token(data.email) 
+    return await auth_service.send_password_reset_email(data.email,reset_token)
 
 @router.post("/{token_id}/reset-password")
 async def reset_password(
